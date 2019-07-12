@@ -705,37 +705,67 @@ class DisabledButton extends React.Component {
 }
 
 class PreviousButton extends React.Component {
-  render () {
+  changePage () {
     const { currentPage, router, location } = this.props;
-    const disabled = currentPage === 1;
     const movePath = location.pathname + '?page=' + (currentPage - 1);
+    router.push(movePath)
+  }
+
+  clickAction () {
+    this.changePage();
+    this.props.setLoading();
+  }
+
+  render () {
+    const { currentPage } = this.props;
+    const disabled = currentPage === 1;
     return (
-      <button className='btn btn-sm btn-default' disabled={disabled} onClick={() => router.push(movePath)}>Prev</button>
+      <button className='btn btn-sm btn-default' disabled={disabled} onClick={() => this.clickAction()}>Prev</button>
     )
   }
 }
 
 class NextButton extends React.Component {
-  render () {
-    const { currentPage, pageCount, router, location } = this.props;
-    const disabled = currentPage === pageCount;
+  changePage () {
+    const { currentPage, router, location } = this.props;
     const movePath = location.pathname + '?page=' + (currentPage + 1);
+    router.push(movePath)
+  }
+
+  clickAction () {
+    this.changePage();
+    this.props.setLoading();
+  }
+
+  render () {
+    const { currentPage, pageCount } = this.props;
+    const disabled = currentPage === pageCount;
     return (
-      <button className='btn btn-sm btn-default' disabled={disabled} onClick={() => router.push(movePath)}>Next</button>
+      <button className='btn btn-sm btn-default' disabled={disabled} onClick={() => this.clickAction()}>Next</button>
     )
   }
 }
 
 class PageButton extends React.Component {
-  render () {
-    const { pageNumber, currentPage, router, location } = this.props;
-    const isCurrent = pageNumber === currentPage;
+  changePage () {
+    const { pageNumber, router, location } = this.props;
     const movePath = location.pathname + "?page=" + pageNumber;
+    router.push(movePath)
+  }
+
+  clickAction () {
+    this.changePage();
+    this.props.setLoading();
+  }
+
+  render () {
+    const { pageNumber, currentPage } = this.props;
+    const isCurrent = pageNumber === currentPage;
 
     if (isCurrent) {
-      return <button className='btn btn-sm btn-success' onClick={() => router.push(movePath)}>{pageNumber}</button>
+      return <button className='btn btn-sm btn-success' onClick={() => this.clickAction()}>{pageNumber}</button>
     } else {
-      return <button className='btn btn-sm btn-default' onClick={() => router.push(movePath)}>{pageNumber}</button>
+      return <button className='btn btn-sm btn-default' onClick={() => this.clickAction()}>{pageNumber}</button>
     }
   }
 }
@@ -743,13 +773,20 @@ class PageButton extends React.Component {
 class Pagination extends React.Component {
   createPageButtons (pageNumbers, currentPage, router, location) {
     return pageNumbers.map(pageNumber => {
-      return <PageButton key={pageNumber} pageNumber={pageNumber} currentPage={currentPage} router={router} location={location}/>
+      return <PageButton
+        key={pageNumber}
+        pageNumber={pageNumber}
+        currentPage={currentPage}
+        router={router}
+        location={location}
+        setLoading={this.props.setLoading}
+      />
     });
   }
 
   addPrevAndNextButton(buttons, pageCount, currentPage, router, location) {
-    buttons.unshift(<PreviousButton currentPage={currentPage} router={router} location={location}/>);
-    buttons.push(<NextButton currentPage={currentPage} pageCount={pageCount} router={router} location={location} />);
+    buttons.unshift(<PreviousButton currentPage={currentPage} router={router} location={location} setLoading={this.props.setLoading} />);
+    buttons.push(<NextButton currentPage={currentPage} pageCount={pageCount} router={router} location={location} setLoading={this.props.setLoading} />);
   }
 
   createButtons (pageCount, currentPage, router, location) {
@@ -800,7 +837,8 @@ class Pagination extends React.Component {
 class SessionsView extends React.Component {
   state = {
     sessions: [],
-    pageCount: 1
+    pageCount: 1,
+    isLoading: false
   };
 
   componentDidMount () {
@@ -814,6 +852,12 @@ class SessionsView extends React.Component {
     model().fetchSessions(page).then(({ sessions, pageCount }) => {
       this.setState({ sessions, pageCount })
     })
+
+    this.setState({ isLoading: false })
+  }
+
+  setLoading () {
+    this.setState({ isLoading: true })
   }
 
   render () {
@@ -821,17 +865,32 @@ class SessionsView extends React.Component {
     if (this.props.location.query.page) currentPage = parseInt(this.props.location.query.page);
     else currentPage = 1;
 
-    return (
-      <div>
-        <h2>Sessions</h2>
+    let sessions;
+    if (this.state.isLoading) {
+      sessions = (
+        <div className='loadingContainer'>
+          <span className='glyphicon glyphicon-refresh spinning' />
+          <span className='loadingText'>Loading ...</span>
+        </div>
+      )
+    } else {
+      sessions = (
         <StatusFilter sessions={this.state.sessions} >
           <SessionListView />
         </StatusFilter>
+      )
+    }
+
+    return (
+      <div>
+        <h2>Sessions</h2>
+        {sessions}
         <Pagination
           pageCount={this.state.pageCount}
           currentPage={currentPage}
           location={this.props.location}
           router={this.props.router}
+          setLoading={() => this.setLoading()}
         />
         <ReactInterval timeout={refreshIntervalMillis} enabled={Boolean(true)} callback={() => this.fetch()} />
       </div>
@@ -850,7 +909,8 @@ class ProjectView extends React.Component {
     project: {},
     workflows: [],
     sessions: [],
-    pageCount: 1
+    pageCount: 1,
+    isLoading: false
   };
 
   componentDidMount () {
@@ -883,6 +943,7 @@ class ProjectView extends React.Component {
           if (!this.ignoreLastFetch) {
             this.setState({ sessions, pageCount })
           }
+          this.setState({ isLoading: false })
         })
       }
     })
@@ -893,12 +954,32 @@ class ProjectView extends React.Component {
     })
   }
 
+  setLoading () {
+    this.setState({ isLoading: true })
+  }
+
   render () {
     const project = this.state.project
 
     let currentPage;
     if (this.props.location.query.page) currentPage = parseInt(this.props.location.query.page);
     else currentPage = 1;
+
+    let sessions;
+    if (this.state.isLoading) {
+      sessions = (
+        <div className='loadingContainer'>
+          <span className='glyphicon glyphicon-refresh spinning' />
+          <span className='loadingText'>Loading ...</span>
+        </div>
+      )
+    } else {
+      sessions = (
+        <StatusFilter sessions={this.state.sessions} >
+          <SessionListView />
+        </StatusFilter>
+      )
+    }
 
     return (
       <div>
@@ -936,15 +1017,14 @@ class ProjectView extends React.Component {
         </div>
         <div className='row'>
           <h2>Sessions</h2>
-          <StatusFilter sessions={this.state.sessions}>
-            <SessionListView />
-          </StatusFilter>
+          {sessions}
         </div>
         <Pagination
           pageCount={this.state.pageCount}
           currentPage={currentPage}
           location={this.props.location}
           router={this.props.router}
+          setLoading={() => this.setLoading()}
         />
         <ReactInterval timeout={refreshIntervalMillis} enabled={Boolean(true)} callback={() => this.fetch()} />
       </div>
