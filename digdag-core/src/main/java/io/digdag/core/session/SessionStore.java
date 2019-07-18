@@ -9,7 +9,7 @@ import io.digdag.core.repository.ResourceNotFoundException;
 public interface SessionStore
         extends SessionTransaction
 {
-    List<StoredSessionWithLastAttempt> getSessions(int pageSize, Optional<Long> lastId);
+    List<StoredSessionWithLastAttempt> getSessions(int pageSize, Optional<Long> lastId, int dbOffset);
 
     StoredSessionWithLastAttempt getSessionById(long sessionId)
         throws ResourceNotFoundException;

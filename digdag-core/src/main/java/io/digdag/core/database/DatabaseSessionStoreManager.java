@@ -1169,9 +1169,9 @@ public class DatabaseSessionStoreManager
         }
 
         @Override
-        public List<StoredSessionWithLastAttempt> getSessions(int pageSize, Optional<Long> lastId)
+        public List<StoredSessionWithLastAttempt> getSessions(int pageSize, Optional<Long> lastId, int dbOffset)
         {
-            return autoCommit((handle, dao) -> dao.getSessions(siteId, pageSize, lastId.or(Long.MAX_VALUE)));
+            return autoCommit((handle, dao) -> dao.getSessions(siteId, pageSize, lastId.or(Long.MAX_VALUE), dbOffset));
         }
 
         @Override
@@ -1525,8 +1525,9 @@ public class DatabaseSessionStoreManager
                 " where s.project_id in (select id from projects where site_id = :siteId)" +
                 " and s.id < :lastId" +
                 " order by s.id desc" +
-                " limit :limit")
-        List<StoredSessionWithLastAttempt> getSessions(@Bind("siteId") int siteId, @Bind("limit") int limit, @Bind("lastId") long lastId);
+                " limit :limit" +
+                " offset :offset")
+        List<StoredSessionWithLastAttempt> getSessions(@Bind("siteId") int siteId, @Bind("limit") int limit, @Bind("lastId") long lastId, @Bind("offset") int offset);
 
         // h2's MERGE doesn't reutrn generated id when conflicting row already exists
         @SqlUpdate("merge into sessions" +
@@ -1561,8 +1562,9 @@ public class DatabaseSessionStoreManager
                 " where s.project_id = any(array(select id from projects where site_id = :siteId))" +
                 " and s.id < :lastId" +
                 " order by s.id desc" +
-                " limit :limit")
-        List<StoredSessionWithLastAttempt> getSessions(@Bind("siteId") int siteId, @Bind("limit") int limit, @Bind("lastId") long lastId);
+                " limit :limit" +
+                " offset :offset")
+        List<StoredSessionWithLastAttempt> getSessions(@Bind("siteId") int siteId, @Bind("limit") int limit, @Bind("lastId") long lastId, @Bind("offset") int offset);
 
         @SqlQuery("insert into sessions" +
                 " (project_id, workflow_name, session_time)" +
@@ -1593,7 +1595,7 @@ public class DatabaseSessionStoreManager
         @SqlQuery("select now() as date")
         Instant now();
 
-        List<StoredSessionWithLastAttempt> getSessions(@Bind("siteId") int siteId, @Bind("limit") int limit, @Bind("lastId") long lastId);
+        List<StoredSessionWithLastAttempt> getSessions(@Bind("siteId") int siteId, @Bind("limit") int limit, @Bind("lastId") long lastId, @Bind("offset") int offset);
 
         @SqlQuery("select s.*, sa.site_id, sa.attempt_name, sa.workflow_definition_id, sa.state_flags, sa.timezone, sa.params, sa.created_at, sa.finished_at, sa.index" +
                 " from sessions s" +
