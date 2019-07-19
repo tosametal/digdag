@@ -77,7 +77,11 @@ public class SessionResource
             Integer pageOffset = Optional.fromNullable(pageNumber).or(1);
             int dbOffset = validPageSize * (pageOffset - 1);
             List<StoredSessionWithLastAttempt> sessions = ss.getSessions(validPageSize, Optional.fromNullable(lastId), dbOffset);
-            return RestModels.sessionCollection(rs, sessions, 1);
+            Integer totalSessionsCount = ss.getTotalSessionsCount(Optional.fromNullable(lastId));
+            System.out.println("totalSessionsCount is " + totalSessionsCount);
+            int pageCount = totalSessionsCount / validPageSize;
+            if (totalSessionsCount % validPageSize != 0) pageCount += 1;
+            return RestModels.sessionCollection(rs, sessions, pageCount);
         });
     }
 
